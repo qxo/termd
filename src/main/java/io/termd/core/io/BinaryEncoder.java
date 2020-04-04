@@ -16,12 +16,14 @@
 
 package io.termd.core.io;
 
-import io.termd.core.function.Consumer;
-
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.charset.Charset;
 import java.util.Arrays;
+import io.termd.core.function.Consumer;
 
 /**
  * @author <a href="mailto:julien@julienviet.com">Julien Viet</a>
@@ -44,7 +46,22 @@ public class BinaryEncoder implements Consumer<int[]> {
   public void setCharset(Charset charset) {
     this.charset = charset;
   }
-
+  
+  private static final Method METHOD_FLIP;
+  static {
+    Method method = null;
+    try {
+      method = CharBuffer.class.getDeclaredMethod("flip");
+    } catch (NoSuchMethodException e1) {
+      try {
+        method = Buffer.class.getDeclaredMethod("flip");
+      }catch(NoSuchMethodException e2) {
+        throw new IllegalStateException(e2);
+      }
+    }
+    METHOD_FLIP = method;
+  }
+  
   @Override
   public void accept(int[] codePoints) {
     final char[] tmp = new char[2];
@@ -57,7 +74,15 @@ public class BinaryEncoder implements Consumer<int[]> {
       int size = Character.toChars(codePoint, tmp, 0);
       charBuf.put(tmp, 0, size);
     }
-    charBuf.flip();
+    try {
+      METHOD_FLIP.invoke(charBuf);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    } catch (IllegalArgumentException e) {
+      throw new IllegalStateException(e);
+    } catch (InvocationTargetException e) {
+      throw new IllegalStateException(e);
+    }
     ByteBuffer bytesBuf = charset.encode(charBuf);
     byte[] bytes = bytesBuf.array();
     if (bytesBuf.limit() < bytesBuf.array().length) {
