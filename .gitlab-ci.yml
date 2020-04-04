@@ -1,6 +1,7 @@
 stages:
   - build
   - test
+  - deploy
 
 build:
   stage: build
@@ -9,3 +10,8 @@ build:
 unit-test:
   stage: test
   script: "mvn -U test"
+  
+deploy:
+  stage: deploy
+  script:
+  - "mvn deploy"
