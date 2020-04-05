@@ -271,7 +271,7 @@ public abstract class TelnetHandlerTest extends TelnetTestBase {
         return new TelnetHandler() {
           @Override
           protected void onOpen(TelnetConnection conn) {
-            conn.write(new byte[]{0, 1, 2, 3, 127, (byte) 0x80, (byte) 0x81, -1});
+            conn.write(new byte[]{0, 1, 2, 3, 127, (byte) 0x80, (byte) 0x81, 127});
           }
         };
       }
@@ -283,8 +283,8 @@ public abstract class TelnetHandlerTest extends TelnetTestBase {
     assertEquals((byte)2, data[2]);
     assertEquals((byte)3, data[3]);
     assertEquals((byte)127, data[4]);
-    assertEquals((byte)0, data[5]);
-    assertEquals((byte)1, data[6]);
+    assertEquals((byte) 0x80, data[5]);
+    assertEquals((byte) 0x81, data[6]);
     assertEquals((byte)127, data[7]);
   }
 
