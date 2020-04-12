@@ -1,32 +1,61 @@
 variables:
 # MAVEN_CLI_OPTS: "-s .m2/settings.xml --batch-mode"
-  MAVEN_OPTS: "-Dmaven.repo.local=.m2/repository -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=WARN"
+  MAVEN_OPTS: "-Xmx1024m -Dmaven.repo.local=.m2 -Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=DEBUG"
+  TESTS_CLASSES: "!org.apache.sshd.common.forward.PortForwardingTest#testRemoteForwarding*"
 
 # define list of files that should be cached
 cache:
   key: maven-repository-cache
   paths:
-  - /root/.m2
-image: maven:3.6-jdk-8-alpine
+  - .m2
+image: lucidhz/maven:3.6-jdk-8-alpine-gpg-git #maven:3.6-jdk-8-alpine
 
 stages:
   - build
   - test
   - deploy
 
-build:
-  stage: build
-  script: "mvn clean package"
+.default: &default
+  allow_failure: false
 
+
+build:
+  <<: *default
+  stage: build
+  script: "mvn clean compile test-compile"
+  artifacts:
+    name: surefire-reports
+#    untracked: true
+    expire_in: 60 days
+    paths:
+    - target/classes
+    - target/test-classes
+    - target/maven-status
 unit-test:
+  <<: *default
   stage: test
-  script: "mvn -U test -DforkCount=1"
-  
-deploy:
-  stage: deploy
   script:
-  - "mvn deploy"
+  - "mvn test -DforkCount=0  -Dtest=$TESTS_CLASSES -Dorg.apache.sshd.test.outputDebugMessages=false -e"
+ #-Dtest=org.apache.sshd.common.forward.PortForwardingTest #io.termd.core.readline.LineBufferTest
+  artifacts:
+    name: surefire-reports
+#    untracked: true
+    expire_in: 60 days
+    when: on_failure
+    paths:
+    - target/surefire-reports
+    - target/maven-status
+
+deploy:
+  <<: *default
+  stage: deploy
+#  stage: test
+  script:
+  - test -z "$(which gpg)" && apk add  --no-cache gnupg
+  - |
+    echo "$GPG_PRIVATE_KEY" | base64 -d | gpg -v  --batch --yes --passphrase "${GPG_PASSPHRASE}"  --import
+  - "mvn javadoc:jar -Dmaven.javadoc.failOnError=false deploy -Dmaven.test.skip -Poss -s $(pwd)/.gitlab/ci-deploy-settings.xml"
   environment:
     name: oss-sonatype
     url: https://oss.sonatype.org/
-  when: manual
+#  when: manual

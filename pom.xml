@@ -5,6 +5,7 @@
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
     <version>9</version>
+    <relativePath></relativePath>
   </parent>
 
   <groupId>com.github.qxo</groupId>
@@ -165,7 +166,7 @@
     <dependency>
       <groupId>com.jcraft</groupId>
       <artifactId>jsch</artifactId>
-      <version>0.1.53</version>
+      <version>0.1.55</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -195,7 +196,7 @@
       <plugins>
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.18</version>
+          <version>2.22.2</version>
           <executions>
             <execution>
               <id>default-test</id>
@@ -725,6 +726,57 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>oss</id>
+      <properties>
+         <gpg.keyname>${env.GPG_KEYNAME}</gpg.keyname>
+         <gpg.passphrase>${env.GPG_PASSPHRASE}</gpg.passphrase>
+      </properties>
+      <build>
+        <plugins>
+           <!--Maven GPG插件用于使用以下配置对组件进行签名-->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.6</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                          <configuration>
+                                <!-- This is necessary for gpg to not try to use the pinentry programs -->
+                                <gpgArguments>
+                                    <arg>--pinentry-mode</arg>
+                                    <arg>loopback</arg>
+                                </gpgArguments>
+                            </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-javadoc-plugin</artifactId>
+              <version>2.10.2</version>
+              <executions>
+                <execution>
+                  <id>attach-javadocs</id>
+                  <goals>
+                    <goal>jar</goal>
+                  </goals>
+                  <configuration> <!-- add this to disable checking -->
+                    <additionalparam>-Xdoclint:none</additionalparam>
+                  </configuration>
+                </execution>
+              </executions>
+            </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+
   </profiles>
 
 </project>
